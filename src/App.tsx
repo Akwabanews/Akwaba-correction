@@ -3049,12 +3049,6 @@ export default function App() {
         {showSplash && <SplashScreen isDarkMode={isDarkMode} />}
       </AnimatePresence>
 
-      <AuthModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
-        onSuccess={handleAuthSuccess}
-      />
-
       <AnimatePresence>
         {showClassifiedsModal && (
           <PostClassifiedModal 
@@ -3095,7 +3089,7 @@ export default function App() {
             initial={{ x: 400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 400, opacity: 0 }}
-            className="fixed top-24 right-6 z-[150] max-w-sm w-full"
+            className="fixed top-24 right-6 z-[1000] max-w-sm w-full"
           >
             <div className={cn(
               "text-white p-6 rounded-3xl shadow-2xl flex gap-4 items-start border-4 border-white/20",
@@ -5151,6 +5145,11 @@ Dernière mise à jour : Avril 2026
           <span className="text-[10px] font-bold">À propos</span>
         </button>
       </nav>
+      <AuthModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onSuccess={handleAuthSuccess}
+      />
     </div>
     </>
   );
