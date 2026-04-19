@@ -152,14 +152,24 @@ export interface SiteSettings {
   isDonationActive: boolean;
   isPremiumActive: boolean;
   activePaymentMethods: {
-    paypal: boolean;
-    stripe: boolean;
-    flutterwave: boolean;
-    orangeMoney: boolean;
-    mtn: boolean;
-    moov: boolean;
-    wave: boolean;
+    paypal?: boolean;
+    stripe?: boolean;
+    flutterwave?: boolean;
+    orangeMoney?: boolean;
+    mtn?: boolean;
+    moov?: boolean;
+    wave?: boolean;
   };
+  paymentLinks?: {
+    paypal?: string;
+    stripe?: string;
+    flutterwave?: string;
+    orangeMoney?: string;
+    mtn?: string;
+    moov?: string;
+    wave?: string;
+  };
+  premiumDurationMonths?: number;
   paypalId?: string;
   stripePublicKey?: string;
   flutterwavePublicKey?: string;

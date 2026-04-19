@@ -1913,7 +1913,17 @@ export default function App() {
       mtn: true,
       moov: false,
       wave: true
-    }
+    },
+    paymentLinks: {
+      paypal: "",
+      stripe: "",
+      flutterwave: "",
+      orangeMoney: "",
+      mtn: "",
+      moov: "",
+      wave: ""
+    },
+    premiumDurationMonths: 1
   });
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -2411,18 +2421,25 @@ export default function App() {
     }
   };
 
-  const handleUpgradePremium = async (method: 'PayPal' | 'Orange Money') => {
+  const handleUpgradePremium = async (method: string) => {
     if (!currentUser) {
       handleUserLogin();
       return;
     }
     
+    // Check for custom payment link
+    const payLink = siteSettings.paymentLinks?.[method];
+    if (payLink) {
+       window.location.href = payLink;
+       return;
+    }
+
     try {
       setActiveNotification({ message: "Traitement du paiement en cours...", type: 'info' });
       // Simulate payment delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      await SupabaseService.upgradeToPremium(currentUser.uid, method);
+      await SupabaseService.upgradeToPremium(currentUser.uid, method, siteSettings.premiumDurationMonths || 1);
       
       const isActuallyPremium = await SupabaseService.checkPremiumStatus(currentUser.uid);
       const profile = await SupabaseService.getUserProfile(currentUser.uid);
@@ -4491,7 +4508,14 @@ export default function App() {
                     </div>
 
                     <button 
-                      onClick={() => setDonationSuccess(true)}
+                      onClick={() => {
+                        const payLink = siteSettings.paymentLinks?.[selectedPayment];
+                        if (payLink) {
+                          window.location.href = payLink;
+                        } else {
+                          setDonationSuccess(true);
+                        }
+                      }}
                       className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                     >
                       CONFIRMER MON DON DE {selectedAmount} F

@@ -285,7 +285,7 @@ export const AdminDashboard = ({
   onLogout: () => void,
   onGenerateCode: () => void
 }) => {
-  const [activeTab, setActiveTab] = useState<'articles' | 'events' | 'comments' | 'subscribers' | 'media' | 'settings' | 'analytics' | 'alerts' | 'support' | 'polls' | 'premium'>('articles');
+  const [activeTab, setActiveTab] = useState<'articles' | 'events' | 'comments' | 'subscribers' | 'media' | 'settings' | 'analytics' | 'alerts' | 'support' | 'polls' | 'premium' | 'payments'>('articles');
   const [searchTerm, setSearchTerm] = useState('');
   const [tempSettings, setTempSettings] = useState<SiteSettings>(settings);
   const [newCategory, setNewCategory] = useState('');
@@ -542,6 +542,15 @@ export const AdminDashboard = ({
           )}
         >
           Abonnements
+        </button>
+        <button 
+          onClick={() => setActiveTab('payments')}
+          className={cn(
+            "px-6 py-4 font-black transition-all border-b-2 shrink-0 text-sm",
+            activeTab === 'payments' ? "border-primary text-primary" : "border-transparent text-slate-400 hover:text-slate-600"
+          )}
+        >
+          Gestion des paiements
         </button>
       </div>
 
@@ -951,6 +960,208 @@ export const AdminDashboard = ({
                     </>
                   )}
                 </button>
+              </div>
+            </motion.div>
+          ) : activeTab === 'payments' ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8 pb-20"
+            >
+              <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl p-10 space-y-12 Africa-pattern">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-primary/10 rounded-2xl text-primary shadow-lg shadow-primary/5">
+                    <CreditCard size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black tracking-tight">Gestion des Paiements</h3>
+                    <p className="text-slate-400 font-medium italic">Configurez vos moyens de paiement et vos tarifs premium.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                   {/* Moyens de Paiement */}
+                  <div className="space-y-8">
+                    <h4 className="text-xl font-black flex items-center gap-2 border-b border-slate-50 pb-4">
+                      <CheckCircle className="text-emerald-500" size={24} /> 
+                      Moyens de Paiement Activés
+                    </h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {Object.entries({
+                        paypal: 'PayPal',
+                        stripe: 'Stripe',
+                        flutterwave: 'Flutterwave',
+                        orange: 'Orange Money',
+                        wave: 'Wave',
+                        mtn: 'MTN Mobile Money',
+                        moov: 'Moov Money'
+                      }).map(([key, label]) => (
+                        <div key={key} className={cn(
+                          "p-6 rounded-3xl border-2 transition-all flex flex-col gap-4",
+                          tempSettings.activePaymentMethods?.[key] ? "bg-white border-primary shadow-xl shadow-primary/5" : "bg-slate-50 border-transparent opacity-60"
+                        )}>
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={!!tempSettings.activePaymentMethods?.[key]}
+                                onChange={e => {
+                                  const active = { ...(tempSettings.activePaymentMethods || {}) };
+                                  (active as any)[key] = e.target.checked;
+                                  setTempSettings({...tempSettings, activePaymentMethods: active});
+                                }}
+                                className="w-6 h-6 rounded-lg accent-primary"
+                              />
+                              <span className="font-black text-sm uppercase tracking-wider">{label}</span>
+                            </label>
+                          </div>
+                          
+                          {tempSettings.activePaymentMethods?.[key] && (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                               <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Lien de redirection / Interface de Paiement</label>
+                                  <div className="relative">
+                                    <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                    <input 
+                                      type="text"
+                                      placeholder="https://votre-lien-de-paiement.com/..."
+                                      className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-primary transition-all"
+                                      value={tempSettings.paymentLinks?.[key] || ''}
+                                      onChange={e => {
+                                        const links = { ...(tempSettings.paymentLinks || {}) };
+                                        (links as any)[key] = e.target.value;
+                                        setTempSettings({...tempSettings, paymentLinks: links});
+                                      }}
+                                    />
+                                  </div>
+                               </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Config & Amounts */}
+                  <div className="space-y-12">
+                    {/* Configuration Dons */}
+                    <div className="space-y-8">
+                      <h4 className="text-xl font-black flex items-center gap-2 border-b border-slate-50 pb-4">
+                        <Heart className="text-red-500" size={24} /> 
+                        Donations
+                      </h4>
+                      <div className="bg-slate-50 p-8 rounded-[35px] space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="font-black text-sm uppercase">Activer les dons</p>
+                            <p className="text-xs text-slate-400 font-medium">Afficher le bouton de don.</p>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={tempSettings.isDonationActive}
+                            onChange={e => setTempSettings({...tempSettings, isDonationActive: e.target.checked})}
+                            className="w-8 h-8 rounded-full accent-emerald-500 cursor-pointer"
+                          />
+                        </div>
+
+                        <div className="space-y-3 pt-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Montants suggérés (XOF)</label>
+                          <div className="flex flex-wrap gap-3">
+                            {tempSettings.donationAmounts?.map((amt, idx) => (
+                              <div key={idx} className="flex items-center gap-3 bg-white border border-slate-200 pl-4 pr-2 py-2 rounded-2xl shadow-sm">
+                                <span className="font-black text-sm">{amt.toLocaleString()}</span>
+                                <button 
+                                  onClick={() => setTempSettings({...tempSettings, donationAmounts: tempSettings.donationAmounts.filter((_, i) => i !== idx)})}
+                                  className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-all"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <div className="flex gap-2">
+                               <input 
+                                type="number"
+                                id="new-donation-amt-dashboard"
+                                placeholder="Ajouter..."
+                                className="bg-white border border-slate-200 rounded-2xl px-4 py-2 text-sm font-bold w-28 outline-none focus:border-primary"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const val = parseInt((e.target as HTMLInputElement).value);
+                                    if (!isNaN(val)) {
+                                      setTempSettings({...tempSettings, donationAmounts: [...(tempSettings.donationAmounts || []), val].sort((a,b) => a-b)});
+                                      (e.target as HTMLInputElement).value = '';
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Configuration Premium */}
+                    <div className="space-y-8">
+                      <h4 className="text-xl font-black flex items-center gap-2 border-b border-slate-50 pb-4">
+                        <Award className="text-primary" size={24} /> 
+                        Tarification Premium
+                      </h4>
+                      <div className="bg-slate-900 text-white p-8 rounded-[35px] space-y-8 shadow-2xl relative overflow-hidden">
+                          <TrendingUp className="absolute top-0 right-0 p-8 opacity-10" size={120} />
+                          <div className="flex items-center justify-between relative z-10">
+                             <div className="space-y-1">
+                                <p className="font-black text-sm uppercase text-primary">Service Premium Actif</p>
+                                <p className="text-[10px] text-slate-400 font-medium">Autoriser l'achat d'abonnements.</p>
+                             </div>
+                             <input 
+                                type="checkbox" 
+                                checked={tempSettings.isPremiumActive}
+                                onChange={e => setTempSettings({...tempSettings, isPremiumActive: e.target.checked})}
+                                className="w-8 h-8 rounded-full accent-primary cursor-pointer ring-4 ring-white/10"
+                             />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tarif Mensuel (XOF)</label>
+                              <div className="relative">
+                                <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={24} />
+                                <input 
+                                  type="number"
+                                  value={tempSettings.premiumPrice}
+                                  onChange={e => setTempSettings({...tempSettings, premiumPrice: parseInt(e.target.value) || 0})}
+                                  className="w-full bg-white/5 border-2 border-white/10 rounded-2xl pl-14 pr-6 py-4 text-2xl font-black outline-none focus:border-primary transition-all"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Durée (Mois)</label>
+                              <select 
+                                value={tempSettings.premiumDurationMonths || 1}
+                                onChange={e => setTempSettings({...tempSettings, premiumDurationMonths: parseInt(e.target.value)})}
+                                className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-black outline-none focus:border-primary transition-all appearance-none"
+                              >
+                                {[1, 3, 6, 12].map(m => <option key={m} value={m} className="bg-slate-800">{m} {m === 1 ? 'Mois' : 'Mois'}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sticky Footer for save */}
+                <div className="sticky bottom-0 bg-white/80 backdrop-blur-md p-6 border-t border-slate-50 -mx-10 -mb-10 flex justify-end items-center gap-6">
+                   <p className="text-xs text-slate-400 font-medium hidden md:block italic">Modifications non enregistrées détectées</p>
+                   <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex items-center gap-3 bg-primary text-white font-black px-12 py-5 rounded-3xl hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/40 disabled:opacity-50"
+                  >
+                    {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={24} />}
+                    ENREGISTRER LA CONFIGURATION
+                  </button>
+                </div>
               </div>
             </motion.div>
           ) : activeTab === 'premium' ? (
