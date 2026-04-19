@@ -564,12 +564,31 @@ export const SupabaseService = {
   async upgradeToPremium(userId: string, method?: string, months: number = 1): Promise<void> {
     if (isPlaceholder) return;
     const now = new Date();
-    const until = new Date(now.setMonth(now.getMonth() + months)).toISOString();
+    const until = new Date(new Date().setMonth(now.getMonth() + months)).toISOString();
     await this.updateUserProfile(userId, { 
       isPremium: true, 
+      premiumSince: new Date().toISOString(),
       premiumUntil: until, 
       paymentMethod: method 
     });
+  },
+
+  async setPremiumUntil(userId: string, untilDate: string | null): Promise<void> {
+    if (isPlaceholder) return;
+    await this.updateUserProfile(userId, { 
+      isPremium: !!untilDate, 
+      premiumUntil: untilDate || undefined 
+    });
+  },
+
+  async getPremiumSubscribers(): Promise<UserProfile[]> {
+    if (isPlaceholder) return [];
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('isPremium', true);
+    if (error) return [];
+    return data as UserProfile[];
   }
 };
 

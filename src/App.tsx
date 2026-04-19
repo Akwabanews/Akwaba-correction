@@ -1826,7 +1826,11 @@ export default function App() {
   const [adminArticles, setAdminArticles] = useState<Article[]>(() => {
     try {
       const saved = localStorage.getItem('akwaba_admin_articles');
-      return saved ? JSON.parse(saved) : MOCK_ARTICLES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_ARTICLES;
+      }
+      return MOCK_ARTICLES;
     } catch {
       return MOCK_ARTICLES;
     }
@@ -1834,7 +1838,11 @@ export default function App() {
   const [adminEvents, setAdminEvents] = useState<Event[]>(() => {
     try {
       const saved = localStorage.getItem('akwaba_admin_events');
-      return saved ? JSON.parse(saved) : MOCK_EVENTS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_EVENTS;
+      }
+      return MOCK_EVENTS;
     } catch {
       return MOCK_EVENTS;
     }
@@ -1854,7 +1862,7 @@ export default function App() {
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<string>('5000');
-  const [selectedPayment, setSelectedPayment] = useState<'mobile' | 'card'>('mobile');
+  const [selectedPayment, setSelectedPayment] = useState<string>('orangeMoney');
   const [donationSuccess, setDonationSuccess] = useState(false);
   const [showCookieBanner, setShowCookieBanner] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -1893,9 +1901,19 @@ export default function App() {
     urgentBannerText: "",
     // Donations & Premium
     donationAmounts: [5000, 10000, 25000],
-    donationPaymentMethods: ['PayPal', 'Orange Money'],
+    donationPaymentMethods: ['PayPal', 'Orange Money', 'Wave', 'MTN', 'Moov', 'Stripe', 'Flutterwave'],
     premiumPrice: 5000,
-    isDonationActive: true
+    isDonationActive: true,
+    isPremiumActive: true,
+    activePaymentMethods: {
+      paypal: true,
+      stripe: false,
+      flutterwave: false,
+      orangeMoney: true,
+      mtn: true,
+      moov: false,
+      wave: true
+    }
   });
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -4425,14 +4443,14 @@ export default function App() {
                   <div className="bg-white rounded-[40px] p-8 shadow-2xl border border-slate-100 space-y-8">
                     <div className="space-y-4">
                       <h4 className="font-bold text-sm">Choisissez un montant</h4>
-                      <div className="grid grid-cols-3 gap-3">
-                        {['2000', '5000', '10000'].map(amount => (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {siteSettings.donationAmounts.map(amount => (
                           <button 
                             key={amount} 
-                            onClick={() => setSelectedAmount(amount)}
+                            onClick={() => setSelectedAmount(amount.toString())}
                             className={cn(
                               "py-4 border-2 rounded-2xl text-sm font-black transition-all",
-                              selectedAmount === amount 
+                              selectedAmount === amount.toString() 
                                 ? "border-primary bg-primary/5 text-primary shadow-inner" 
                                 : "border-slate-100 hover:border-primary/30"
                             )}
@@ -4441,43 +4459,43 @@ export default function App() {
                           </button>
                         ))}
                       </div>
+                      <div className="relative mt-2">
+                         <input 
+                            type="number" 
+                            placeholder="Autre montant libre..." 
+                            onChange={(e) => setSelectedAmount(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold outline-none"
+                         />
+                      </div>
                     </div>
                     
                     <div className="space-y-4">
-                      <h4 className="font-bold text-sm">Mode de paiement sécurisé</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button 
-                          onClick={() => setSelectedPayment('mobile')}
-                          className={cn(
-                            "flex flex-col items-center gap-2 p-4 border-2 rounded-2xl transition-all",
-                            selectedPayment === 'mobile'
-                              ? "border-orange-500 bg-orange-50 text-orange-600"
-                              : "border-slate-100 hover:bg-orange-50/50"
-                          )}
-                        >
-                          <Smartphone className={selectedPayment === 'mobile' ? "text-orange-600" : "text-orange-500"} />
-                          <span className="text-xs font-bold">Mobile Money</span>
-                        </button>
-                        <button 
-                          onClick={() => setSelectedPayment('card')}
-                          className={cn(
-                            "flex flex-col items-center gap-2 p-4 border-2 rounded-2xl transition-all",
-                            selectedPayment === 'card'
-                              ? "border-blue-500 bg-blue-50 text-blue-600"
-                              : "border-slate-100 hover:bg-blue-50/50"
-                          )}
-                        >
-                          <CreditCard className={selectedPayment === 'card' ? "text-blue-600" : "text-blue-500"} />
-                          <span className="text-xs font-bold">Carte / PayPal</span>
-                        </button>
+                      <h4 className="font-bold text-sm font-display uppercase tracking-widest text-[10px] text-slate-400">Mode de paiement sécurisé</h4>
+                      <div className="flex flex-wrap gap-4">
+                        {Object.entries(siteSettings.activePaymentMethods || {}).filter(([_, active]) => active).map(([method]) => (
+                          <button 
+                            key={method}
+                            onClick={() => setSelectedPayment(method)}
+                            className={cn(
+                              "flex flex-col items-center gap-2 p-4 border-2 rounded-2xl transition-all min-w-[120px]",
+                              selectedPayment === method
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-slate-100 hover:bg-slate-50"
+                            )}
+                          >
+                            {method === 'paypal' || method === 'stripe' ? <CreditCard /> : <Smartphone />}
+                            <span className="text-[10px] font-black uppercase tracking-wider">{method}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
 
                     <button 
                       onClick={() => setDonationSuccess(true)}
-                      className="w-full bg-primary text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black text-lg shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                     >
-                      Confirmer mon don de {selectedAmount} F
+                      CONFIRMER MON DON DE {selectedAmount} F
+                      <Heart size={20} fill="currentColor" />
                     </button>
                   </div>
                 </>
@@ -4926,7 +4944,7 @@ Dernière mise à jour : Avril 2026
               onClose={() => setShowPremiumModal(false)}
               onUpgrade={handleUpgradePremium}
               price={siteSettings.premiumPrice}
-              methods={siteSettings.donationPaymentMethods}
+              activeMethods={siteSettings.activePaymentMethods}
             />
           )}
         </AnimatePresence>
@@ -5114,13 +5132,19 @@ Dernière mise à jour : Avril 2026
   );
 }
 
-const PremiumModal = ({ onClose, onUpgrade, price, methods }: { 
+const PremiumModal = ({ onClose, onUpgrade, price, activeMethods }: { 
   onClose: () => void, 
-  onUpgrade: (method: 'PayPal' | 'Orange Money') => void,
+  onUpgrade: (method: string) => void,
   price: number,
-  methods: string[]
+  activeMethods: Record<string, boolean>
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'PayPal' | 'Orange Money'>('Orange Money');
+  const [selectedMethod, setSelectedMethod] = useState<string>('');
+
+  useEffect(() => {
+    // Select first active method by default
+    const firstActive = Object.entries(activeMethods).find(([_, active]) => active)?.[0];
+    if (firstActive) setSelectedMethod(firstActive);
+  }, [activeMethods]);
 
   return (
     <motion.div
@@ -5133,103 +5157,76 @@ const PremiumModal = ({ onClose, onUpgrade, price, methods }: {
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-white w-full max-w-xl rounded-[40px] overflow-hidden shadow-2xl relative"
+        className="bg-white w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl relative"
         onClick={e => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full text-slate-400 z-10">
           <X size={24} />
         </button>
 
-        <div className="relative h-48 overflow-hidden bg-slate-900">
-          <div className="absolute inset-0 african-pattern opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
-          <div className="absolute bottom-6 left-8 space-y-2">
-            <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] w-fit">
-              Premium
-            </div>
-            <h2 className="text-3xl font-black italic tracking-tighter text-white">DEVENIR MEMBRE PREMIUM</h2>
-          </div>
-        </div>
+        <div className="flex flex-col md:flex-row h-full">
+           <div className="md:w-2/5 relative overflow-hidden bg-slate-900 p-10 flex flex-col justify-end text-white min-h-[250px] md:min-h-full">
+              <div className="absolute inset-0 african-pattern opacity-10" />
+              <div className="relative z-10 space-y-4">
+                 <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center text-primary border border-primary/20 mb-6">
+                    <TrendingUp size={32} />
+                 </div>
+                 <h2 className="text-4xl font-black italic tracking-tighter leading-none uppercase">Akwaba<br/>Premium</h2>
+                 <p className="text-slate-400 text-sm font-medium">L'information exclusive à portée de main.</p>
+                 <div className="pt-8 border-t border-white/10 mt-8">
+                    <span className="text-3xl font-black">{price} XOF</span>
+                    <span className="text-xs text-slate-500 font-bold ml-2">/ MOIS</span>
+                 </div>
+              </div>
+           </div>
 
-        <div className="p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-50 p-6 rounded-3xl space-y-3 border border-slate-100">
-               <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                 <Radio size={20} />
-               </div>
-               <h4 className="font-bold text-sm">Contenu Exclusif</h4>
-               <p className="text-xs text-slate-500 leading-relaxed font-bold">Analyses, enquêtes et Web TV en illimité.</p>
-            </div>
-            <div className="bg-slate-50 p-6 rounded-3xl space-y-3 border border-slate-100">
-               <div className="w-10 h-10 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary">
-                 <ShoppingBag size={20} />
-               </div>
-               <h4 className="font-bold text-sm">Petites Annonces</h4>
-               <p className="text-xs text-slate-500 leading-relaxed font-bold">Publiez et consultez toutes les annonces.</p>
-            </div>
-            <div className="bg-slate-50 p-6 rounded-3xl space-y-3 border border-slate-100">
-               <div className="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center text-red-600">
-                 <Monitor size={20} />
-               </div>
-               <h4 className="font-bold text-sm">Live Vidéos</h4>
-               <p className="text-xs text-slate-500 leading-relaxed font-bold">Alertes et directs en priorité.</p>
-            </div>
-            <div className="bg-slate-50 p-6 rounded-3xl space-y-3 border border-slate-100">
-               <div className="w-10 h-10 bg-slate-200 rounded-2xl flex items-center justify-center text-slate-600">
-                 <Shield size={20} />
-               </div>
-               <h4 className="font-bold text-sm">Zéro Publicité</h4>
-               <p className="text-xs text-slate-500 leading-relaxed font-bold">Une expérience de lecture épurée.</p>
-            </div>
-          </div>
+           <div className="md:w-3/5 p-8 md:p-12 space-y-8 bg-white">
+              <div className="space-y-6">
+                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Choisir votre moyen de paiement</h3>
+                 <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(activeMethods).filter(([_, active]) => active).map(([name]) => (
+                      <button 
+                        key={name}
+                        onClick={() => setSelectedMethod(name)}
+                        className={cn(
+                          "group relative flex flex-col p-4 border-2 rounded-2xl transition-all h-24 items-start justify-between overflow-hidden",
+                          selectedMethod === name ? "border-primary bg-primary/5" : "border-slate-100 hover:bg-slate-50"
+                        )}
+                      >
+                        {selectedMethod === name && (
+                          <div className="absolute top-2 right-2 text-primary animate-in zoom-in">
+                             <CheckCircle size={16} fill="white" />
+                          </div>
+                        )}
+                        {name === 'paypal' || name === 'stripe' || name === 'flutterwave' ? <CreditCard size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} /> : <Smartphone size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} />}
+                        <span className={cn(
+                          "text-[10px] font-black uppercase tracking-widest leading-none",
+                          selectedMethod === name ? "text-slate-900" : "text-slate-500"
+                        )}>{name}</span>
+                      </button>
+                    ))}
+                 </div>
+              </div>
 
-          <div className="space-y-4">
-             <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-500">Abonnement Mensuel</span>
-                <span className="text-2xl font-black text-primary">{price} XOF <span className="text-xs text-slate-400">/ mois</span></span>
-             </div>
-             
-             <div className="space-y-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Choisir le mode de paiement</p>
-                <div className="grid grid-cols-2 gap-3">
-                   {methods.includes('Orange Money') && (
-                     <button 
-                       onClick={() => setSelectedMethod('Orange Money')}
-                       className={cn(
-                         "flex items-center justify-center gap-2 p-4 border-2 rounded-2xl transition-all",
-                         selectedMethod === 'Orange Money' ? "border-orange-500 bg-orange-50 text-orange-600" : "border-slate-100"
-                       )}
-                     >
-                       <Smartphone size={18} />
-                       <span className="font-bold text-xs uppercase">Orange</span>
-                     </button>
-                   )}
-                   {methods.includes('PayPal') && (
-                     <button 
-                       onClick={() => setSelectedMethod('PayPal')}
-                       className={cn(
-                         "flex items-center justify-center gap-2 p-4 border-2 rounded-2xl transition-all",
-                         selectedMethod === 'PayPal' ? "border-blue-500 bg-blue-50 text-blue-600" : "border-slate-100"
-                       )}
-                     >
-                       <CreditCard size={18} />
-                       <span className="font-bold text-xs uppercase">PayPal</span>
-                     </button>
-                   )}
+              <div className="space-y-4">
+                 <button 
+                  onClick={() => onUpgrade(selectedMethod)}
+                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black text-lg shadow-2xl hover:bg-primary transition-all flex items-center justify-center gap-3 group"
+                >
+                  S'ABONNER MAINTENANT
+                  <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+                </button>
+                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold italic">
+                   <Shield size={12} /> Transaction 100% sécurisée
                 </div>
-             </div>
+              </div>
 
-             <button 
-               onClick={() => onUpgrade(selectedMethod)}
-               className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
-             >
-               S'ABONNER MAINTENANT
-               <ArrowRight size={24} />
-             </button>
-             <p className="text-[10px] text-center text-slate-400 font-bold italic">
-                Paiement sécurisé. Sans engagement, annulez à tout moment.
-             </p>
-          </div>
+              <div className="pt-6 border-t border-slate-50">
+                 <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                   En vous abonnant, vous acceptez nos conditions d'utilisation. Votre abonnement sera actif immédiatement après confirmation du paiement.
+                 </p>
+              </div>
+           </div>
         </div>
       </motion.div>
     </motion.div>

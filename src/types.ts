@@ -38,6 +38,8 @@ export interface Article {
   tags?: string[];
   status: 'draft' | 'published';
   isPremium?: boolean;
+  premiumPreviewSelection?: 'auto' | 'manual';
+  manualPreview?: string;
   scheduledAt?: string;
   // SEO & Social
   seoTitle?: string;
@@ -74,6 +76,7 @@ export interface UserProfile {
   badges: string[];
   points: number;
   isPremium?: boolean;
+  premiumSince?: string;
   premiumUntil?: string; // ISO date string
   paymentMethod?: string;
   history?: { articleId: string; date: string }[];
@@ -146,9 +149,24 @@ export interface SiteSettings {
   donationAmounts: number[];
   donationPaymentMethods: string[];
   premiumPrice: number;
-  paypalId?: string;
-  orangeMoneyNumber?: string;
   isDonationActive: boolean;
+  isPremiumActive: boolean;
+  activePaymentMethods: {
+    paypal: boolean;
+    stripe: boolean;
+    flutterwave: boolean;
+    orangeMoney: boolean;
+    mtn: boolean;
+    moov: boolean;
+    wave: boolean;
+  };
+  paypalId?: string;
+  stripePublicKey?: string;
+  flutterwavePublicKey?: string;
+  orangeMoneyNumber?: string;
+  mtnMoneyNumber?: string;
+  moovMoneyNumber?: string;
+  waveNumber?: string;
 }
 
 export interface Subscriber {

@@ -47,7 +47,11 @@ import {
   TrendingUp,
   Mic,
   Music,
-  Headset
+  Headset,
+  Heart,
+  CreditCard,
+  Award,
+  CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Article, Event, SiteSettings, Comment, Subscriber, MediaAsset, SupportMessage, Poll, UserProfile } from '../types';
@@ -763,76 +767,165 @@ export const AdminDashboard = ({
 
               {/* Donations & Premium settings */}
               <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 space-y-8">
-                <h3 className="text-xl font-black flex items-center gap-2 text-primary"><TrendingUp /> Dons & Abonnement Premium</h3>
+                <h3 className="text-xl font-black flex items-center gap-2 text-primary font-display"><TrendingUp /> Système de Monétisation (Dons & Premium)</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   {/* Donation Config */}
-                  <div className="space-y-6 border-r border-slate-100 pr-8">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm">Paramètres de Don</h4>
-                      <input 
-                        type="checkbox" 
-                        checked={tempSettings.isDonationActive}
-                        onChange={e => setTempSettings({...tempSettings, isDonationActive: e.target.checked})}
-                        className="w-5 h-5 accent-primary"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase text-slate-400">Montants de don suggérés (XOF, séparés par virgule)</label>
-                      <input 
-                        type="text"
-                        value={tempSettings.donationAmounts?.join(', ') || '5000, 10000, 25000'}
-                        onChange={(e) => setTempSettings({
-                          ...tempSettings, 
-                          donationAmounts: e.target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v))
-                        })}
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm outline-none"
-                      />
+                  <div className="space-y-8 h-full">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><Heart size={16} /></div>
+                          <h4 className="font-black text-sm uppercase tracking-tight">Configuration des Dons</h4>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={tempSettings.isDonationActive}
+                          onChange={e => setTempSettings({...tempSettings, isDonationActive: e.target.checked})}
+                          className="w-6 h-6 rounded-full border-2 accent-emerald-500 cursor-pointer"
+                        />
+                      </div>
+                      
+                      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Montants de don suggérés (XOF)</label>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {tempSettings.donationAmounts?.map((amt, i) => (
+                              <div key={i} className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
+                                {amt} <button onClick={() => setTempSettings({...tempSettings, donationAmounts: tempSettings.donationAmounts.filter((_, idx) => idx !== i)})} className="text-red-400 hover:text-red-600"><X size={12}/></button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <input 
+                              type="number" 
+                              id="new-don-amt"
+                              placeholder="Nouveau montant..."
+                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs font-bold outline-none"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const val = parseInt((e.target as HTMLInputElement).value);
+                                  if (!isNaN(val)) {
+                                    setTempSettings({...tempSettings, donationAmounts: [...(tempSettings.donationAmounts || []), val]});
+                                    (e.target as HTMLInputElement).value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button 
+                              onClick={() => {
+                                const el = document.getElementById('new-don-amt') as HTMLInputElement;
+                                const val = parseInt(el.value);
+                                if (!isNaN(val)) {
+                                  setTempSettings({...tempSettings, donationAmounts: [...(tempSettings.donationAmounts || []), val]});
+                                  el.value = '';
+                                }
+                              }}
+                              className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase"
+                            >
+                              Ajouter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase text-slate-400">ID PayPal</label>
-                        <input 
-                          type="text"
-                          value={tempSettings.paypalId || ''}
-                          onChange={(e) => setTempSettings({...tempSettings, paypalId: e.target.value})}
-                          className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm outline-none"
-                        />
+                      <div className="flex items-center gap-2">
+                         <div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><CreditCard size={16} /></div>
+                         <h4 className="font-black text-sm uppercase tracking-tight">Méthodes de Paiement Actives</h4>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase text-slate-400">Numéro Orange Money</label>
-                        <input 
-                          type="text"
-                          value={tempSettings.orangeMoneyNumber || ''}
-                          onChange={(e) => setTempSettings({...tempSettings, orangeMoneyNumber: e.target.value})}
-                          className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm outline-none"
-                        />
+                      <div className="grid grid-cols-1 gap-2">
+                        {Object.entries(tempSettings.activePaymentMethods || {}).map(([key, isActive]) => (
+                          <div key={key} className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border transition-all",
+                            isActive ? "bg-white border-slate-200 shadow-sm" : "bg-slate-50 border-transparent opacity-60"
+                          )}>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="checkbox" 
+                                checked={isActive} 
+                                onChange={e => {
+                                  const active = { ...tempSettings.activePaymentMethods };
+                                  (active as any)[key] = e.target.checked;
+                                  setTempSettings({...tempSettings, activePaymentMethods: active});
+                                }}
+                                className="w-5 h-5 accent-primary"
+                              />
+                              <span className="text-xs font-black uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                            </div>
+                            {isActive && (
+                              <div className="flex-1 max-w-[200px] ml-4">
+                                <input 
+                                  type="text"
+                                  placeholder={key.includes('Number') ? 'Numéro/Compte' : 'Clé API / ID'}
+                                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-1 text-[10px] font-bold outline-none"
+                                  value={(tempSettings as any)[`${key}${key.includes('orange') || key.includes('mtn') || key.includes('moov') || key.includes('wave') ? 'Number' : (key === 'paypal' ? 'Id' : 'PublicKey')}`] || ''}
+                                  onChange={(e) => {
+                                    const field = `${key}${key.includes('orange') || key.includes('mtn') || key.includes('moov') || key.includes('wave') ? 'Number' : (key === 'paypal' ? 'Id' : 'PublicKey')}`;
+                                    setTempSettings({...tempSettings, [field]: e.target.value});
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
 
                   {/* Premium Config */}
-                  <div className="space-y-6">
-                    <h4 className="font-bold text-sm">Paramètres Premium</h4>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase text-slate-400">Prix de l'abonnement mensuel (XOF)</label>
-                      <input 
-                        type="number"
-                        value={tempSettings.premiumPrice || 5000}
-                        onChange={(e) => setTempSettings({...tempSettings, premiumPrice: parseInt(e.target.value)})}
-                        className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm outline-none"
-                      />
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                            <div className="p-2 bg-primary/10 text-primary rounded-lg"><TrendingUp size={16} /></div>
+                            <h4 className="font-black text-sm uppercase tracking-tight">Configuration Premium</h4>
+                         </div>
+                         <input 
+                          type="checkbox" 
+                          checked={tempSettings.isPremiumActive}
+                          onChange={e => setTempSettings({...tempSettings, isPremiumActive: e.target.checked})}
+                          className="w-6 h-6 rounded-full border-2 accent-primary cursor-pointer"
+                        />
+                      </div>
+                      
+                      <div className="bg-slate-900 rounded-3xl p-8 text-white space-y-6 relative overflow-hidden group shadow-2xl">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform">
+                          <Award size={120} />
+                        </div>
+                        <div className="space-y-2 relative">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Abonnement Mensuel</label>
+                          <div className="flex items-end gap-2">
+                            <input 
+                              type="number"
+                              value={tempSettings.premiumPrice || 5000}
+                              onChange={(e) => setTempSettings({...tempSettings, premiumPrice: parseInt(e.target.value)})}
+                              className="bg-white/10 border-2 border-white/10 rounded-2xl px-6 py-4 text-3xl font-black outline-none focus:border-primary transition-all w-48"
+                            />
+                            <span className="text-xl font-bold pb-4">XOF / mois</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl space-y-4 border border-white/10">
+                          <p className="text-[10px] font-black text-primary uppercase flex items-center gap-2"><Check size={14}/> Accès Déverrouillés</p>
+                          <ul className="text-xs space-y-3 font-medium text-slate-300">
+                            <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Articles exclusifs de la rédaction</li>
+                            <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Petites Annonces (Lecture & Publication)</li>
+                            <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Web TV & Live en haute définition</li>
+                            <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Zéro publicité intrusive</li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-primary/5 p-4 rounded-2xl space-y-2">
-                      <p className="text-[10px] font-bold text-primary uppercase">Avantages Premium</p>
-                      <ul className="text-xs space-y-1 text-slate-600 list-disc list-inside">
-                        <li>Accès aux articles exclusifs "Premium"</li>
-                        <li>Accès aux Petites Annonces</li>
-                        <li>Accès aux Live Vidéos / Web TV</li>
-                        <li>Lecture sans publicité (Si configuré)</li>
-                      </ul>
+
+                    <div className="bg-primary/5 p-8 rounded-3xl border border-primary/10 space-y-4">
+                       <h5 className="font-black text-sm italic tracking-tight">Information Systèmes</h5>
+                       <p className="text-xs text-slate-500 leading-relaxed font-medium">Les abonnements sont automatiquement valables 30 jours à partir de la date de paiement. Le système vérifie la validité à chaque connexion de l'utilisateur.</p>
+                       <div className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><Check size={20}/></div>
+                          <span className="text-[10px] font-black uppercase text-slate-700">Expiration Automatique Activée</span>
+                       </div>
                     </div>
                   </div>
                 </div>
@@ -881,11 +974,14 @@ export const AdminDashboard = ({
                   <div className="col-span-3 text-right">Actions</div>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {/* Users list with premium management logic will go here */}
                   <PremiumUserList 
                     onUpgrade={async (uid) => {
                       await SupabaseService.upgradeToPremium(uid, 'Admin Override', 1);
                       alert("Utilisateur passé en Premium pour 1 mois.");
+                    }}
+                    onUpdateStatus={async (uid, date) => {
+                      await SupabaseService.setPremiumUntil(uid, date);
+                      alert("Statut premium mis à jour avec succès.");
                     }}
                   />
                 </div>
@@ -2040,9 +2136,10 @@ export const AdminEditor = ({
   );
 };
 
-const PremiumUserList = ({ onUpgrade }: { onUpgrade: (uid: string) => Promise<void> }) => {
+const PremiumUserList = ({ onUpgrade, onUpdateStatus }: { onUpgrade: (uid: string) => Promise<void>, onUpdateStatus: (uid: string, date: string | null) => Promise<void> }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subSearch, setSubSearch] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -2058,29 +2155,46 @@ const PremiumUserList = ({ onUpgrade }: { onUpgrade: (uid: string) => Promise<vo
     fetchUsers();
   }, []);
 
+  const filtered = users.filter(u => 
+    u.displayName.toLowerCase().includes(subSearch.toLowerCase()) || 
+    u.email.toLowerCase().includes(subSearch.toLowerCase())
+  );
+
   if (loading) return <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>;
 
   return (
     <>
-      {users.length === 0 ? (
+      <div className="p-6 border-b border-slate-100">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+          <input 
+            type="text" 
+            placeholder="Rechercher par nom ou email..."
+            className="w-full bg-slate-50 border-none rounded-xl pl-12 pr-6 py-3 text-xs font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary/20"
+            value={subSearch}
+            onChange={e => setSubSearch(e.target.value)}
+          />
+        </div>
+      </div>
+      {filtered.length === 0 ? (
         <div className="p-10 text-center text-slate-400 font-medium italic">Aucun utilisateur trouvé.</div>
       ) : (
-        users.map(user => (
-          <div key={user.uid} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors group">
+        filtered.map(user => (
+          <div key={user.uid} className="grid grid-cols-12 px-6 py-5 items-center hover:bg-slate-50/50 transition-colors group">
             <div className="col-span-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 border-2 border-white shadow-sm">
+              <div className="w-12 h-12 rounded-[18px] overflow-hidden bg-slate-100 border-2 border-white shadow-md">
                 <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-slate-900 truncate text-xs">{user.displayName}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                <p className="font-black text-slate-900 truncate text-[13px] tracking-tight">{user.displayName}</p>
+                <p className="text-[10px] text-slate-500 truncate font-medium">{user.email}</p>
               </div>
             </div>
             <div className="col-span-3">
               {user.isPremium ? (
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter flex items-center gap-1">
-                    <Check size={10} /> Abonné Actif
+                    <CheckCircle size={10} /> Abonné Actif
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold">
                     Expire le {user.premiumUntil ? format(new Date(user.premiumUntil), 'dd/MM/yyyy') : 'N/A'}
@@ -2091,20 +2205,44 @@ const PremiumUserList = ({ onUpgrade }: { onUpgrade: (uid: string) => Promise<vo
               )}
             </div>
             <div className="col-span-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{user.paymentMethod || '-'}</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-lg">{user.paymentMethod || 'MANUEL'}</span>
             </div>
             <div className="col-span-3 flex justify-end gap-2">
-              {!user.isPremium ? (
+              {user.isPremium ? (
+                <div className="flex gap-2">
+                   <button 
+                    onClick={() => {
+                      const days = prompt("Nombre de jours à ajouter ?", "30");
+                      if (days) {
+                        const current = user.premiumUntil ? new Date(user.premiumUntil) : new Date();
+                        const next = new Date(current.getTime() + parseInt(days) * 24 * 60 * 60 * 1000).toISOString();
+                        onUpdateStatus(user.uid, next);
+                      }
+                    }}
+                    className="p-2 bg-slate-100 text-slate-400 hover:text-primary rounded-xl transition-all"
+                    title="Prolonger"
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if(confirm(`Bloquer l'accès premium de ${user.displayName} ?`)) {
+                        onUpdateStatus(user.uid, null);
+                      }
+                    }}
+                    className="p-2 bg-slate-100 text-slate-400 hover:text-red-500 rounded-xl transition-all"
+                    title="Bloquer Premium"
+                  >
+                    <MonitorOff size={18} />
+                  </button>
+                </div>
+              ) : (
                 <button 
                   onClick={() => onUpgrade(user.uid)}
-                  className="bg-primary text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                  className="bg-primary text-white text-[10px] font-black px-5 py-2.5 rounded-[12px] shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                 >
-                  PASSER PREMIUM
+                  <TrendingUp size={14} /> ACTIVER PREMIUM
                 </button>
-              ) : (
-                <div className="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-black flex items-center gap-1">
-                  <TrendingUp size={10} /> PRIVILÈGE
-                </div>
               )}
             </div>
           </div>
