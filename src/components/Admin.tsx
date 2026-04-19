@@ -42,7 +42,7 @@ import {
   Type,
   Bold,
   Italic,
-  Link,
+  Link as LinkIcon,
   List as ListIcon,
   TrendingUp,
   Mic,
@@ -313,7 +313,16 @@ export const AdminDashboard = ({
 
   // Sync tempSettings when props change
   useEffect(() => {
-    setTempSettings(settings);
+    if (settings) {
+      setTempSettings(prev => ({
+        ...prev,
+        ...settings,
+        activePaymentMethods: settings.activePaymentMethods || prev.activePaymentMethods || {},
+        paymentLinks: settings.paymentLinks || prev.paymentLinks || {},
+        categories: settings.categories || prev.categories || [],
+        donationAmounts: settings.donationAmounts || prev.donationAmounts || [1000, 2000, 5000]
+      }));
+    }
   }, [settings]);
 
   const validate = () => {
@@ -875,7 +884,7 @@ export const AdminDashboard = ({
                                 type="checkbox" 
                                 checked={isActive} 
                                 onChange={e => {
-                                  const active = { ...tempSettings.activePaymentMethods };
+                                  const active = { ...(tempSettings.activePaymentMethods || {}) };
                                   (active as any)[key] = e.target.checked;
                                   setTempSettings({...tempSettings, activePaymentMethods: active});
                                 }}
@@ -887,12 +896,29 @@ export const AdminDashboard = ({
                               <div className="flex-1 max-w-[200px] ml-4">
                                 <input 
                                   type="text"
-                                  placeholder={key.includes('Number') ? 'Numéro/Compte' : 'Clé API / ID'}
+                                  placeholder={key.toLowerCase().includes('money') || key === 'wave' ? 'Numéro de réception' : (key === 'paypal' ? 'ID PayPal' : 'Clé Publique')}
                                   className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-1 text-[10px] font-bold outline-none"
-                                  value={(tempSettings as any)[`${key}${key.includes('orange') || key.includes('mtn') || key.includes('moov') || key.includes('wave') ? 'Number' : (key === 'paypal' ? 'Id' : 'PublicKey')}`] || ''}
+                                  value={(() => {
+                                    if (key === 'orangeMoney') return tempSettings.orangeMoneyNumber || '';
+                                    if (key === 'mtn') return tempSettings.mtnMoneyNumber || '';
+                                    if (key === 'moov') return tempSettings.moovMoneyNumber || '';
+                                    if (key === 'wave') return tempSettings.waveNumber || '';
+                                    if (key === 'paypal') return tempSettings.paypalId || '';
+                                    if (key === 'stripe') return tempSettings.stripePublicKey || '';
+                                    if (key === 'flutterwave') return tempSettings.flutterwavePublicKey || '';
+                                    return '';
+                                  })()}
                                   onChange={(e) => {
-                                    const field = `${key}${key.includes('orange') || key.includes('mtn') || key.includes('moov') || key.includes('wave') ? 'Number' : (key === 'paypal' ? 'Id' : 'PublicKey')}`;
-                                    setTempSettings({...tempSettings, [field]: e.target.value});
+                                    const val = e.target.value;
+                                    const update: any = {};
+                                    if (key === 'orangeMoney') update.orangeMoneyNumber = val;
+                                    else if (key === 'mtn') update.mtnMoneyNumber = val;
+                                    else if (key === 'moov') update.moovMoneyNumber = val;
+                                    else if (key === 'wave') update.waveNumber = val;
+                                    else if (key === 'paypal') update.paypalId = val;
+                                    else if (key === 'stripe') update.stripePublicKey = val;
+                                    else if (key === 'flutterwave') update.flutterwavePublicKey = val;
+                                    setTempSettings({...tempSettings, ...update});
                                   }}
                                 />
                               </div>
@@ -1011,7 +1037,7 @@ export const AdminDashboard = ({
                         paypal: 'PayPal',
                         stripe: 'Stripe',
                         flutterwave: 'Flutterwave',
-                        orange: 'Orange Money',
+                        orangeMoney: 'Orange Money',
                         wave: 'Wave',
                         mtn: 'MTN Mobile Money',
                         moov: 'Moov Money'
@@ -1037,11 +1063,11 @@ export const AdminDashboard = ({
                           </div>
                           
                           {tempSettings.activePaymentMethods?.[key] && (
-                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                <div className="space-y-1">
-                                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Lien de redirection / Interface de Paiement</label>
+                                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Lien de redirection (Optionnel)</label>
                                   <div className="relative">
-                                    <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                                     <input 
                                       type="text"
                                       placeholder="https://votre-lien-de-paiement.com/..."
@@ -1055,6 +1081,36 @@ export const AdminDashboard = ({
                                     />
                                   </div>
                                </div>
+
+                               {(key === 'orangeMoney' || key === 'mtn' || key === 'moov' || key === 'wave') && (
+                                 <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Numéro de réception (Transfert Manuel)</label>
+                                    <div className="relative">
+                                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                      <input 
+                                        type="text"
+                                        placeholder="Ex: 07 00 00 00 00"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-primary transition-all"
+                                        value={(() => {
+                                          if (key === 'orangeMoney') return tempSettings.orangeMoneyNumber || '';
+                                          if (key === 'mtn') return tempSettings.mtnMoneyNumber || '';
+                                          if (key === 'moov') return tempSettings.moovMoneyNumber || '';
+                                          if (key === 'wave') return tempSettings.waveNumber || '';
+                                          return '';
+                                        })()}
+                                        onChange={e => {
+                                          const val = e.target.value;
+                                          const update: any = {};
+                                          if (key === 'orangeMoney') update.orangeMoneyNumber = val;
+                                          else if (key === 'mtn') update.mtnMoneyNumber = val;
+                                          else if (key === 'moov') update.moovMoneyNumber = val;
+                                          else if (key === 'wave') update.waveNumber = val;
+                                          setTempSettings({...tempSettings, ...update});
+                                        }}
+                                      />
+                                    </div>
+                                 </div>
+                               )}
                             </div>
                           )}
                         </div>
@@ -2060,7 +2116,7 @@ export const AdminEditor = ({
                         className="p-2 hover:bg-white hover:text-primary rounded-lg transition-all text-slate-500"
                         title="Lien"
                       >
-                        <Link size={16} />
+                        <LinkIcon size={16} />
                       </button>
                       <button 
                         type="button"
