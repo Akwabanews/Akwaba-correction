@@ -59,7 +59,8 @@ import {
   Monitor,
   Radio,
   Shield,
-  ShoppingBag
+  ShoppingBag,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -2218,9 +2219,12 @@ export default function App() {
             // Cleanup URL
             window.history.replaceState({}, '', window.location.pathname);
           });
+        }).catch(err => {
+          console.error("Payment confirmation error:", err);
+          setActiveNotification({ message: "Erreur lors de la confirmation du paiement.", type: 'urgent' });
         });
     }
-  }, [currentUser, siteSettings.premiumDurationMonths]);
+  }, [currentUser, siteSettings]);
 
   const handleAdminLogin = async () => {
     try {
@@ -2451,9 +2455,6 @@ export default function App() {
     // Check for custom payment link
     const payLink = siteSettings.paymentLinks?.[method];
     if (payLink) {
-       // If it's a real link, we just redirect. 
-       // The user expects to be premium AFTER paying.
-       // We tell them to follow the link.
        setActiveNotification({ message: "Redirection vers le portail de paiement...", type: 'info' });
        setTimeout(() => {
          window.location.href = payLink;
@@ -2461,38 +2462,12 @@ export default function App() {
        return;
     }
 
-    // If no link is provided, we simulate a "Payment initiation"
-    // In a real app, this is where we'd call an API like Stripe or Flutterwave
-    try {
-      setActiveNotification({ message: "Initiation du paiement " + method + "...", type: 'info' });
-      
-      // We do NOT upgrade automatically here anymore.
-      // We show a message that they must complete the payment.
-      
-      // Simulate calling a payment API that returns a success
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // For the demo / default flow when no link is provided, we can still simulate a success 
-      // but only after a "confirmation" from a simulated gateway.
-      
-      await SupabaseService.upgradeToPremium(currentUser.uid, method, siteSettings.premiumDurationMonths || 1);
-      
-      const isActuallyPremium = await SupabaseService.checkPremiumStatus(currentUser.uid);
-      const profile = await SupabaseService.getUserProfile(currentUser.uid);
-      
-      setCurrentUser(prev => prev ? { 
-        ...prev, 
-        isPremium: isActuallyPremium,
-        premiumUntil: profile?.premiumUntil 
-      } : null);
-      
-      setShowPremiumModal(false);
-      setActiveNotification({ message: "Paiement validé ! Bienvenue au Club Premium.", type: 'success' });
-      setTimeout(() => setActiveNotification(null), 5000);
-    } catch (error) {
-      console.error(error);
-      setActiveNotification({ message: "Échec du paiement. Veuillez réessayer.", type: 'urgent' });
-    }
+    // For manual methods or methods without link, we just show instructions in the modal
+    // We do NOT call upgradeToPremium here anymore.
+    setActiveNotification({ 
+      message: "Veuillez effectuer le paiement via " + method + " pour activer votre abonnement.", 
+      type: 'info' 
+    });
   };
 
   const handleBookmarkArticle = async (articleId: string) => {
@@ -4998,6 +4973,7 @@ Dernière mise à jour : Avril 2026
               onUpgrade={handleUpgradePremium}
               price={siteSettings.premiumPrice}
               activeMethods={siteSettings.activePaymentMethods}
+              settings={siteSettings}
             />
           )}
         </AnimatePresence>
@@ -5190,13 +5166,15 @@ Dernière mise à jour : Avril 2026
   );
 }
 
-const PremiumModal = ({ onClose, onUpgrade, price, activeMethods }: { 
+const PremiumModal = ({ onClose, onUpgrade, price, activeMethods, settings }: { 
   onClose: () => void, 
   onUpgrade: (method: string) => void,
   price: number,
-  activeMethods: Record<string, boolean>
+  activeMethods: Record<string, boolean>,
+  settings: SiteSettings
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<string>('');
+  const [paymentInitiated, setPaymentInitiated] = useState(false);
 
   useEffect(() => {
     // Select first active method by default
@@ -5204,12 +5182,26 @@ const PremiumModal = ({ onClose, onUpgrade, price, activeMethods }: {
     if (firstActive) setSelectedMethod(firstActive);
   }, [activeMethods]);
 
+  const getPaymentDetails = (method: string) => {
+    switch(method) {
+      case 'paypal': return settings.paypalId ? `ID: ${settings.paypalId}` : null;
+      case 'stripe': return settings.stripePublicKey ? "Paiement par Carte" : null;
+      case 'orange': return settings.orangeMoneyNumber ? `Transfert au ${settings.orangeMoneyNumber}` : null;
+      case 'wave': return settings.waveNumber ? `Transfert au ${settings.waveNumber}` : null;
+      case 'mtn': return settings.mtnMoneyNumber ? `Transfert au ${settings.mtnMoneyNumber}` : null;
+      case 'moov': return settings.moovMoneyNumber ? `Transfert au ${settings.moovMoneyNumber}` : null;
+      default: return null;
+    }
+  };
+
+  const hasDirectLink = !!settings.paymentLinks?.[selectedMethod];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+      className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div
@@ -5238,50 +5230,115 @@ const PremiumModal = ({ onClose, onUpgrade, price, activeMethods }: {
               </div>
            </div>
 
-           <div className="md:w-3/5 p-8 md:p-12 space-y-8 bg-white">
-              <div className="space-y-6">
-                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Choisir votre moyen de paiement</h3>
-                 <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(activeMethods).filter(([_, active]) => active).map(([name]) => (
-                      <button 
-                        key={name}
-                        onClick={() => setSelectedMethod(name)}
-                        className={cn(
-                          "group relative flex flex-col p-4 border-2 rounded-2xl transition-all h-24 items-start justify-between overflow-hidden",
-                          selectedMethod === name ? "border-primary bg-primary/5" : "border-slate-100 hover:bg-slate-50"
-                        )}
-                      >
-                        {selectedMethod === name && (
-                          <div className="absolute top-2 right-2 text-primary animate-in zoom-in">
-                             <CheckCircle size={16} fill="white" />
-                          </div>
-                        )}
-                        {name === 'paypal' || name === 'stripe' || name === 'flutterwave' ? <CreditCard size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} /> : <Smartphone size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} />}
-                        <span className={cn(
-                          "text-[10px] font-black uppercase tracking-widest leading-none",
-                          selectedMethod === name ? "text-slate-900" : "text-slate-500"
-                        )}>{name}</span>
-                      </button>
-                    ))}
-                 </div>
-              </div>
+           <div className="md:w-3/5 p-8 md:p-12 space-y-8 bg-white overflow-y-auto max-h-[90vh]">
+              {!paymentInitiated ? (
+                <>
+                  <div className="space-y-6">
+                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Choisir votre moyen de paiement</h3>
+                     <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(activeMethods).filter(([_, active]) => active).map(([name]) => (
+                          <button 
+                            key={name}
+                            onClick={() => setSelectedMethod(name)}
+                            className={cn(
+                              "group relative flex flex-col p-4 border-2 rounded-2xl transition-all h-24 items-start justify-between overflow-hidden",
+                              selectedMethod === name ? "border-primary bg-primary/5" : "border-slate-100 hover:bg-slate-50"
+                            )}
+                          >
+                            {selectedMethod === name && (
+                              <div className="absolute top-2 right-2 text-primary animate-in zoom-in">
+                                 <CheckCircle size={16} fill="white" />
+                              </div>
+                            )}
+                            {name === 'paypal' || name === 'stripe' || name === 'flutterwave' ? <CreditCard size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} /> : <Smartphone size={20} className={selectedMethod === name ? "text-primary" : "text-slate-400"} />}
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-widest leading-none",
+                              selectedMethod === name ? "text-slate-900" : "text-slate-500"
+                            )}>{name}</span>
+                          </button>
+                        ))}
+                     </div>
+                  </div>
 
-              <div className="space-y-4">
-                 <button 
-                  onClick={() => onUpgrade(selectedMethod)}
-                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black text-lg shadow-2xl hover:bg-primary transition-all flex items-center justify-center gap-3 group"
-                >
-                  S'ABONNER MAINTENANT
-                  <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
-                </button>
-                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold italic">
-                   <Shield size={12} /> Transaction 100% sécurisée
+                  {selectedMethod && (
+                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-2 animate-in fade-in slide-in-from-top-4">
+                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Détails du paiement</p>
+                       <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                          <CheckCircle size={16} className="text-emerald-500" />
+                          {getPaymentDetails(selectedMethod) || "Paiement via portail sécurisé"}
+                       </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                     <button 
+                      onClick={() => {
+                        if (hasDirectLink) {
+                          onUpgrade(selectedMethod);
+                        } else {
+                          setPaymentInitiated(true);
+                        }
+                      }}
+                      className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black text-sm uppercase tracking-widest shadow-2xl hover:bg-primary transition-all flex items-center justify-center gap-3 group"
+                    >
+                      {hasDirectLink ? "PAYER MAINTENANT" : "CONTINUER VERS LE PAIEMENT"}
+                      <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
+                    </button>
+                    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold italic">
+                       <Shield size={12} /> Transaction 100% sécurisée
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-8 py-4 animate-in fade-in zoom-in">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-primary/10 rounded-2xl w-fit text-primary">
+                       <Smartphone size={32} />
+                    </div>
+                    <h3 className="text-2xl font-black">Finaliser votre Transfert</h3>
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                      Veuillez effectuer le transfert de <span className="text-slate-900 font-black">{price} XOF</span> vers le numéro suivant :
+                    </p>
+                  </div>
+
+                  <div className="p-8 bg-slate-900 rounded-[30px] text-white space-y-2 text-center relative overflow-hidden">
+                     <div className="absolute inset-0 african-pattern opacity-10" />
+                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Numéro de réception</p>
+                     <p className="text-3xl font-black tracking-widest relative z-10">{getPaymentDetails(selectedMethod)?.split(' ').pop() || "NON CONFIGURÉ"}</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex gap-3 items-start">
+                       <Info size={18} className="text-amber-500 shrink-0" />
+                       <p className="text-[10px] text-amber-800 font-bold leading-tight">
+                         Une fois le transfert effectué, veuillez nous envoyer une capture d'écran ou la référence de transaction via le support client. Votre compte sera activé dans les plus brefs délais.
+                       </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                       <button 
+                        onClick={() => setPaymentInitiated(false)}
+                        className="py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                       >
+                         Retour
+                       </button>
+                       <button 
+                        onClick={() => {
+                          onClose();
+                          // Navigate to support or contact if possible
+                        }}
+                        className="py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+                       >
+                         D'ACCORD
+                       </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="pt-6 border-t border-slate-50">
                  <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                   En vous abonnant, vous acceptez nos conditions d'utilisation. Votre abonnement sera actif immédiatement après confirmation du paiement.
+                   En vous abonnant, vous acceptez nos conditions d'utilisation. Pour les paiements manuels, l'activation nécessite une vérification humaine.
                  </p>
               </div>
            </div>

@@ -285,9 +285,29 @@ export const AdminDashboard = ({
   onLogout: () => void,
   onGenerateCode: () => void
 }) => {
-  const [activeTab, setActiveTab] = useState<'articles' | 'events' | 'comments' | 'subscribers' | 'media' | 'settings' | 'analytics' | 'alerts' | 'support' | 'polls' | 'premium' | 'payments'>('articles');
+  const [activeTab, setActiveTab] = useState<'articles' | 'events' | 'comments' | 'subscribers' | 'media' | 'settings' | 'analytics' | 'alerts' | 'support' | 'polls' | 'premium' | 'payments'>(
+    (localStorage.getItem('akwaba_admin_tab') as any) || 'articles'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('akwaba_admin_tab', activeTab);
+  }, [activeTab]);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [tempSettings, setTempSettings] = useState<SiteSettings>(settings);
+  const [tempSettings, setTempSettings] = useState<SiteSettings>(settings || {
+    aboutText: '',
+    email: '',
+    phone: '',
+    address: '',
+    categories: [],
+    maintenanceMode: false,
+    donationAmounts: [1000, 2000, 5000],
+    donationPaymentMethods: [],
+    premiumPrice: 5000,
+    isDonationActive: false,
+    isPremiumActive: false,
+    activePaymentMethods: {}
+  });
   const [newCategory, setNewCategory] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -312,17 +332,17 @@ export const AdminDashboard = ({
     if (!validate()) return;
     setIsSaving(true);
     
-    // Sécurité : Réinitialiser isSaving après 15s si la promesse ne revient pas
+    // Safety : Réinitialiser isSaving après 15s si la promesse ne revient pas
     const safetyTimer = setTimeout(() => {
       setIsSaving(false);
-      alert("La sauvegarde prend plus de temps que prévu. Vérifiez votre connexion.");
     }, 15000);
 
     try {
       await onSaveSettings(tempSettings);
-    } catch (e) {
+      // Success is handled by the parent's notification system
+    } catch (e: any) {
       console.error(e);
-      alert("Une erreur est survenue lors de la sauvegarde.");
+      alert("Une erreur est survenue lors de la sauvegarde : " + (e.message || "Erreur inconnue"));
     } finally {
       clearTimeout(safetyTimer);
       setIsSaving(false);
