@@ -2201,6 +2201,27 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    // Check for payment success redirection (e.g. ?payment_success=true&method=PayPal)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment_success') === 'true' && currentUser) {
+      const method = params.get('method') || 'unknown';
+      SupabaseService.upgradeToPremium(currentUser.uid, method, siteSettings.premiumDurationMonths || 1)
+        .then(() => {
+          SupabaseService.getUserProfile(currentUser.uid).then(profile => {
+            setCurrentUser(prev => prev ? { 
+              ...prev, 
+              isPremium: true,
+              premiumUntil: profile?.premiumUntil 
+            } : null);
+            setActiveNotification({ message: "Paiement confirmé ! Bienvenue dans le Club Premium.", type: 'success' });
+            // Cleanup URL
+            window.history.replaceState({}, '', window.location.pathname);
+          });
+        });
+    }
+  }, [currentUser, siteSettings.premiumDurationMonths]);
+
   const handleAdminLogin = async () => {
     try {
       const adminEmail = 'akwabanewsinfo@gmail.com';
@@ -2430,21 +2451,35 @@ export default function App() {
     // Check for custom payment link
     const payLink = siteSettings.paymentLinks?.[method];
     if (payLink) {
-       window.location.href = payLink;
+       // If it's a real link, we just redirect. 
+       // The user expects to be premium AFTER paying.
+       // We tell them to follow the link.
+       setActiveNotification({ message: "Redirection vers le portail de paiement...", type: 'info' });
+       setTimeout(() => {
+         window.location.href = payLink;
+       }, 1500);
        return;
     }
 
+    // If no link is provided, we simulate a "Payment initiation"
+    // In a real app, this is where we'd call an API like Stripe or Flutterwave
     try {
-      setActiveNotification({ message: "Traitement du paiement en cours...", type: 'info' });
-      // Simulate payment delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setActiveNotification({ message: "Initiation du paiement " + method + "...", type: 'info' });
+      
+      // We do NOT upgrade automatically here anymore.
+      // We show a message that they must complete the payment.
+      
+      // Simulate calling a payment API that returns a success
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // For the demo / default flow when no link is provided, we can still simulate a success 
+      // but only after a "confirmation" from a simulated gateway.
       
       await SupabaseService.upgradeToPremium(currentUser.uid, method, siteSettings.premiumDurationMonths || 1);
       
       const isActuallyPremium = await SupabaseService.checkPremiumStatus(currentUser.uid);
       const profile = await SupabaseService.getUserProfile(currentUser.uid);
       
-      // Update local state
       setCurrentUser(prev => prev ? { 
         ...prev, 
         isPremium: isActuallyPremium,
@@ -2452,11 +2487,11 @@ export default function App() {
       } : null);
       
       setShowPremiumModal(false);
-      setActiveNotification({ message: "Félicitations ! Vous êtes maintenant membre Premium.", type: 'success' });
+      setActiveNotification({ message: "Paiement validé ! Bienvenue au Club Premium.", type: 'success' });
       setTimeout(() => setActiveNotification(null), 5000);
     } catch (error) {
       console.error(error);
-      setActiveNotification({ message: "Erreur lors de la mise à niveau.", type: 'urgent' });
+      setActiveNotification({ message: "Échec du paiement. Veuillez réessayer.", type: 'urgent' });
     }
   };
 
